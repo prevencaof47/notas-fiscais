@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notas Fiscais - Gerenciamento de Recebimento</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    </style>
+</head>
+<body class="bg-[#f6f8fa] text-gray-700 p-8">
+
+    <div class="max-w-[1600px] mx-auto">
+        
+        <div class="flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-2xl font-bold text-[#1e293b] flex items-center gap-2">
+                    📋 Notas Fiscais
+                </h1>
+                <p class="text-[13px] text-gray-400 mt-0.5">Gerenciamento de recebimento</p>
+            </div>
+            <div class="flex gap-2.5">
+                <button onclick="exportarCSV()" class="px-4 py-2 border border-gray-300 rounded-lg text-[13px] font-medium bg-white text-gray-700 hover:bg-gray-50 flex items-center gap-1.5 shadow-sm transition">
+                    <i class="fa-solid fa-arrow-down text-gray-500 text-xs"></i> Exportar CSV
+                </button>
+                <button onclick="abrirModal()" class="px-4 py-2 bg-[#1d63b8] hover:bg-[#164e91] text-white rounded-lg text-[13px] font-medium flex items-center gap-1.5 shadow-sm transition">
+                    <span class="text-base font-normal">+</span> Nova Nota Fiscal
+                </button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-5">
+            <div class="bg-white p-4 rounded-xl border border-gray-200/80 shadow-sm">
+                <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Total de Notas</p>
+                <p id="card-total-notas" class="text-2xl font-bold text-[#1d63b8] mt-1.5">0</p>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-gray-200/80 shadow-sm">
+                <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Valor Total</p>
+                <p id="card-valor-total" class="text-2xl font-bold text-[#1e293b] mt-1.5">R$ 0,00</p>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-gray-200/80 shadow-sm">
+                <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Não Acatadas</p>
+                <p id="card-nao-acatadas" class="text-2xl font-bold text-[#d9383a] mt-1.5">0</p>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-gray-200/80 shadow-sm">
+                <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Acatadas</p>
+                <p id="card-acatadas" class="text-2xl font-bold text-[#22c55e] mt-1.5">0</p>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl border border-gray-200/80 shadow-sm mb-5">
+            <div class="p-4 flex justify-between items-center cursor-pointer" onclick="toggleFiltros()">
+                <span class="text-[13px] font-bold text-gray-700 flex items-center gap-1.5">
+                    <span id="seta-filtro" class="text-[10px]">▼</span> Filtros
+                </span>
+                <button onclick="event.stopPropagation(); limparFiltros();" class="px-3 py-1 border border-gray-200 rounded-md text-[11px] font-medium text-gray-500 bg-white hover:bg-gray-50 flex items-center gap-1 shadow-sm">
+                    ✕ Limpar filtros
+                </button>
+            </div>
+            <div id="container-filtros" class="px-4 pb-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <input type="text" id="filtro-fornecedor" oninput="renderizarTabela()" placeholder="Filtrar por Fornecedor..." class="w-full px-3 py-2 border border-gray-200 rounded-lg text-[13px] text-gray-600 placeholder-gray-400 focus:outline-none focus:border-[#1d63b8]">
+                <input type="text" id="filtro-nf" oninput="renderizarTabela()" placeholder="Filtrar por Nº NF..." class="w-full px-3 py-2 border border-gray-200 rounded-lg text-[13px] text-gray-600 placeholder-gray-400 focus:outline-none focus:border-[#1d63b8]">
+                <select id="filtro-status" onchange="renderizarTabela()" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-[13px] text-gray-500 focus:outline-none focus:border-[#1d63b8]">
+                    <option value="">Todos os Status</option>
+                    <option value="ACATADA">ACATADA</option>
+                    <option value="NÃO ACATADA">NÃO ACATADA</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl border border-gray-200/80 shadow-sm overflow-hidden">
+            <div class="p-4 border-b border-gray-100">
+                <p id="contador-registros" class="text-[13px] text-gray-400 font-medium">0 notas encontradas</p>
+                <p class="text-[11px] text-gray-400/80 mt-0.5">≡ Arraste os cabeçalhos para reordenar as colunas</p>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-[13px] border-collapse">
+                    <thead>
+                        <tr class="bg-gray-50/70 text-gray-500 border-b border-gray-200 font-medium">
+                            <th class="p-3.5 pl-5 font-medium whitespace-nowrap text-gray-400"><span class="text-gray-300 mr-1">≡</span> Data</th>
+                            <th class="p-3.5 font-medium whitespace-nowrap text-gray-400"><span class="text-gray-300 mr-1">≡</span> Fornecedor</th>
+                            <th class="p-3.5 font-medium whitespace-nowrap text-gray-400"><span class="text-gray-300 mr-1">≡</span> NF</th>
+                            <th class="p-3.5 font-medium whitespace-nowrap text-gray-400"><span class="text-gray-300 mr-1">≡</span> Valor</th>
+                            <th class="p-3.5 font-medium whitespace-nowrap text-gray-400"><span class="text-gray-300 mr-1">≡</span> Chegada</th>
+                            <th class="p-3.5 font-medium whitespace-nowrap text-gray-400"><span class="text-gray-300 mr-1">≡</span> Saída</th>
+                            <th class="p-3.5 font-medium whitespace-nowrap text-gray-400"><span class="text-gray-300 mr-1">≡</span> Temp.</th>
+                            <th class="p-3.5 font-medium whitespace-nowrap text-gray-400"><span class="text-gray-300 mr-1">≡</span> Conferente</th>
+                            <th class="p-3.5 font-medium whitespace-nowrap text-gray-400"><span class="text-gray-300 mr-1">≡</span> Prevenção</th>
+                            <th class="p-3.5 font-medium whitespace-nowrap text-gray-400"><span class="text-gray-300 mr-1">≡</span> Status</th>
+                            <th class="p-3.5 font-medium whitespace-nowrap text-gray-400"><span class="text-gray-300 mr-1">≡</span> Observação</th>
+                            <th class="p-3.5 pr-5 font-medium text-center text-gray-400">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabela-corpo" class="divide-y divide-gray-100 text-[#334155]">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-nota" class="fixed inset-0 bg-black/40 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
+            <h3 id="modal-titulo" class="text-[16px] font-bold text-gray-800 mb-4">Nova Nota Fiscal</h3>
+            <form id="form-nota" onsubmit="salvarNota(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <input type="hidden" id="nota-id">
+                <div>
+                    <label class="block text-[11px] font-bold text-gray-400 uppercase mb-1">Data</label>
+                    <input type="date" id="input-data" required class="w-full p-2 border border-gray-200 rounded-lg text-[13px] focus:outline-none focus:border-[#1d63b8]">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-gray-400 uppercase mb-1">Fornecedor</label>
+                    <input type="text" id="input-fornecedor" required class="w-full p-2 border border-gray-200 rounded-lg text-[13px] focus:outline-none focus:border-[#1d63b8]">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-gray-400 uppercase mb-1">Número da NF</label>
+                    <input type="text" id="input-nf" required class="w-full p-2 border border-gray-200 rounded-lg text-[13px] focus:outline-none focus:border-[#1d63b8]">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-gray-400 uppercase mb-1">Valor (R$)</label>
+                    <input type="number" step="0.01" id="input-valor" required class="w-full p-2 border border-gray-200 rounded-lg text-[13px] focus:outline-none focus:border-[#1d63b8]">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-gray-400 uppercase mb-1">Hora Chegada</label>
+                    <input type="time" id="input-chegada" class="w-full p-2 border border-gray-200 rounded-lg text-[13px] focus:outline-none focus:border-[#1d63b8]">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-gray-400 uppercase mb-1">Hora Saída</label>
+                    <input type="time" id="input-saida" class="w-full p-2 border border-gray-200 rounded-lg text-[13px] focus:outline-none focus:border-[#1d63b8]">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-gray-400 uppercase mb-1">Temperatura</label>
+                    <input type="text" id="input-temp" value="-" class="w-full p-2 border border-gray-200 rounded-lg text-[13px] focus:outline-none focus:border-[#1d63b8]">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-gray-400 uppercase mb-1">Conferente</label>
+                    <input type="text" id="input-conferente" class="w-full p-2 border border-gray-200 rounded-lg text-[13px] focus:outline-none focus:border-[#1d63b8]">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-gray-400 uppercase mb-1">Prevenção</label>
+                    <input type="text" id="input-prevencao" class="w-full p-2 border border-gray-200 rounded-lg text-[13px] focus:outline-none focus:border-[#1d63b8]">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-gray-400 uppercase mb-1">Status</label>
+                    <select id="input-status" class="w-full p-2 border border-gray-200 rounded-lg text-[13px] text-gray-600 focus:outline-none focus:border-[#1d63b8]">
+                        <option value="ACATADA">ACATADA</option>
+                        <option value="NÃO ACATADA">NÃO ACATADA</option>
+                    </select>
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="block text-[11px] font-bold text-gray-400 uppercase mb-1">Observação</label>
+                    <input type="text" id="input-observacao" value="-" class="w-full p-2 border border-gray-200 rounded-lg text-[13px] focus:outline-none focus:border-[#1d63b8]">
+                </div>
+                <div class="sm:col-span-2 flex justify-end gap-2 mt-2">
+                    <button type="button" onclick="fecharModal()" class="px-4 py-2 border border-gray-200 text-[13px] font-medium rounded-lg hover:bg-gray-50 text-gray-600">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-[#1d63b8] hover:bg-[#164e91] text-white text-[13px] font-medium rounded-lg">Salvar Dados</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Memória local integrada + Dado exemplo original do seu print
+        let notas = JSON.parse(localStorage.getItem('database_nf')) || [
+            {
+                id: "1",
+                data: "2026-06-29",
+                fornecedor: "Apol",
+                nf: "61.975",
+                valor: 1119.13,
+                chegada: "07:06",
+                saida: "07:10",
+                temp: "-",
+                conferente: "Amanda",
+                prevencao: "Lucas",
+                status: "ACATADA",
+                observacao: "-"
+            }
+        ];
+
+        function formatarMoeda(v) {
+            return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
+        }
+
+        function formatarDataBR(d) {
+            if(!d) return '-';
+            const p = d.split('-');
+            return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : d;
+        }
+
+        function toggleFiltros() {
+            const el = document.getElementById('container-filtros');
+            const seta = document.getElementById('seta-filtro');
+            if (el.classList.contains('hidden')) {
+                el.classList.remove('hidden');
+                seta.innerText = "▼";
+            } else {
+                el.classList.add('hidden');
+                seta.innerText = "▶";
+            }
+        }
+
+        function renderizarTabela() {
+            const corpo = document.getElementById('tabela-corpo');
+            corpo.innerHTML = '';
+
+            const fForn = document.getElementById('filtro-fornecedor').value.toLowerCase();
+            const fNf = document.getElementById('filtro-nf').value.toLowerCase();
+            const fStat = document.getElementById('filtro-status').value;
+
+            let listaFiltrada = notas.filter(n => {
+                return (n.fornecedor || '').toLowerCase().includes(fForn) &&
+                       (n.nf || '').toLowerCase().includes(fNf) &&
+                       (fStat === "" || n.status === fStat);
+            });
+
+            // Atualização dos Painéis Dinâmicos
+            document.getElementById('card-total-notas').innerText = listaFiltrada.length;
+            const total = listaFiltrada.reduce((acc, current) => acc + parseFloat(current.valor || 0), 0);
+            document.getElementById('card-valor-total').innerText = formatarMoeda(total);
+            document.getElementById('card-acatadas').innerText = listaFiltrada.filter(n => n.status === 'ACATADA').length;
+            document.getElementById('card-nao-acatadas').innerText = listaFiltrada.filter(n => n.status === 'NÃO ACATADA').length;
+            document.getElementById('contador-registros').innerText = `${listaFiltrada.length} ${listaFiltrada.length === 1 ? 'nota encontrada' : 'notas encontradas'}`;
+
+            // Construção das Linhas da Tabela
+            listaFiltrada.forEach(n => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-[#f8fafc] transition text-[#475569] border-b border-gray-100";
+                
+                const badgeStyle = n.status === 'ACATADA' 
+                    ? 'bg-[#e8f7f0] text-[#10b981] font-bold text-[10px]' 
+                    : 'bg-[#fde8e8] text-[#ef4444] font-bold text-[10px]';
+
+                tr.innerHTML = `
+                    <td class="p-3.5 pl-5 font-normal">${formatarDataBR(n.data)}</td>
+                    <td class="p-3.5 font-semibold text-gray-900">${n.fornecedor}</td>
+                    <td class="p-3.5 font-normal text-gray-500">${n.nf}</td>
+                    <td class="p-3.5 font-bold text-gray-900">${formatarMoeda(n.valor)}</td>
+                    <td class="p-3.5 font-normal">${n.chegada || '-'}</td>
+                    <td class="p-3.5 font-normal">${n.saida || '-'}</td>
+                    <td class="p-3.5 font-normal">${n.temp || '-'}</td>
+                    <td class="p-3.5 font-normal">${n.conferente || '-'}</td>
+                    <td class="p-3.5 font-normal">${n.prevencao || '-'}</td>
+                    <td class="p-3.5">
+                        <span class="px-2 py-0.5 rounded uppercase tracking-wide border border-transparent ${badgeStyle}">
+                            ${n.status}
+                        </span>
+                    </td>
+                    <td class="p-3.5 font-normal text-gray-400">${n.observacao || '-'}</td>
+                    <td class="p-3.5 pr-5 text-center">
+                        <div class="flex justify-center items-center gap-2.5">
+                            <button onclick="editarNota('${n.id}')" class="text-[#f59e0b] hover:text-[#d97706] transition" title="Editar">
+                                <i class="fa-solid fa-pencil text-sm"></i>
+                            </button>
+                            <button onclick="excluirNota('${n.id}')" class="text-gray-300 hover:text-[#ef4444] transition p-1 rounded border border-gray-200 bg-white shadow-sm" title="Excluir">
+                                <i class="fa-solid fa-trash-can text-sm"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                corpo.appendChild(tr);
+            });
+
+            localStorage.setItem('database_nf', JSON.stringify(notas));
+        }
+
+        function abrirModal() {
+            document.getElementById('modal-titulo').innerText = "Nova Nota Fiscal";
+            document.getElementById('form-nota').reset();
+            document.getElementById('nota-id').value = "";
+            document.getElementById('modal-nota').classList.remove('hidden');
+        }
+
+        function fecharModal() {
+            document.getElementById('modal-nota').classList.add('hidden');
+        }
+
+        function salvarNota(e) {
+            e.preventDefault();
+            const id = document.getElementById('nota-id').value;
+
+            const n = {
+                id: id || Date.now().toString(),
+                data: document.getElementById('input-data').value,
+                fornecedor: document.getElementById('input-fornecedor').value,
+                nf: document.getElementById('input-nf').value,
+                valor: parseFloat(document.getElementById('input-valor').value),
+                chegada: document.getElementById('input-chegada').value || "-",
+                saida: document.getElementById('input-saida').value || "-",
+                temp: document.getElementById('input-temp').value || "-",
+                conferente: document.getElementById('input-conferente').value || "-",
+                prevencao: document.getElementById('input-prevencao').value || "-",
+                status: document.getElementById('input-status').value,
+                observacao: document.getElementById('input-observacao').value || "-"
+            };
+
+            if(id) {
+                const index = notas.findIndex(item => item.id === id);
+                if(index !== -1) notas[index] = n;
+            } else {
+                notas.push(n);
+            }
+
+            fecharModal();
+            renderizarTabela();
+        }
+
+        function editarNota(id) {
+            const n = notas.find(item => item.id === id);
+            if(!n) return;
+
+            document.getElementById('modal-titulo').innerText = "Editar Nota Fiscal";
+            document.getElementById('nota-id').value = n.id;
+            document.getElementById('input-data').value = n.data;
+            document.getElementById('input-fornecedor').value = n.fornecedor;
+            document.getElementById('input-nf').value = n.nf;
+            document.getElementById('input-valor').value = n.valor;
+            document.getElementById('input-chegada').value = n.chegada === '-' ? '' : n.chegada;
+            document.getElementById('input-saida').value = n.saida === '-' ? '' : n.saida;
+            document.getElementById('input-temp').value = n.temp === '-' ? '-' : n.temp;
+            document.getElementById('input-conferente').value = n.conferente === '-' ? '' : n.conferente;
+            document.getElementById('input-prevencao').value = n.prevencao === '-' ? '' : n.prevencao;
+            document.getElementById('input-status').value = n.status;
+            document.getElementById('input-observacao').value = n.observacao === '-' ? '-' : n.observacao;
+
+            document.getElementById('modal-nota').classList.remove('hidden');
+        }
+
+        function excluirNota(id) {
+            if(confirm("Confirma a exclusão definitiva deste registro?")) {
+                notas = notas.filter(n => n.id !== id);
+                renderizarTabela();
+            }
+        }
+
+        function limparFiltros() {
+            document.getElementById('filtro-fornecedor').value = "";
+            document.getElementById('filtro-nf').value = "";
+            document.getElementById('filtro-status').value = "";
+            renderizarTabela();
+        }
+
+        function exportarCSV() {
+            let csv = "data:text/csv;charset=utf-8,\uFEFFData,Fornecedor,NF,Valor,Chegada,Saída,Temp,Conferente,Prevenção,Status,Observação\n";
+            notas.forEach(n => {
+                csv += `"${formatarDataBR(n.data)}","${n.fornecedor}","${n.nf}","${n.valor}","${n.chegada}","${n.saida}","${n.temp}","${n.conferente}","${n.prevencao}","${n.status}","${n.observacao}"\n`;
+            });
+            const d = document.createElement("a");
+            d.setAttribute("href", encodeURI(csv));
+            d.setAttribute("download", "controle_recebimento_nf.csv");
+            document.body.appendChild(d);
+            d.click();
+            document.body.removeChild(d);
+        }
+
+        // Inicializador automático
+        renderizarTabela();
+    </script>
+</body>
+</html>
