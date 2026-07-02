@@ -14,7 +14,7 @@
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
             <div>
                 <h1 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
-                    📋 Notas Fiscaís
+                    📋 Notas Fiscais
                 </h1>
                 <p class="text-sm text-gray-500">Gerenciamento de recebimento</p>
             </div>
@@ -70,7 +70,7 @@
         <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
             <div class="p-4 border-b border-gray-100 bg-gray-50/50">
                 <p id="contador-registros" class="text-sm text-gray-500 font-medium">0 notas encontradas</p>
-                <p class="text-xs text-gray-400 mt-0.5">≡ Arraste os cabeçalhos para reordenar as colunas (Visual)</p>
+                <p class="text-xs text-gray-400 mt-0.5">≡ Arraste os cabeçalhos para reordenar as colunas</p>
             </div>
             
             <div class="overflow-x-auto">
@@ -99,7 +99,7 @@
 
     </div>
 
-    <div id="modal-nota" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center p-4 z-50 animate-fade-in">
+    <div id="modal-nota" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center p-4 z-50">
         <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
             <h3 id="modal-titulo" class="text-lg font-bold text-gray-800 mb-4">Nova Nota Fiscal</h3>
             <form id="form-nota" onsubmit="salvarNota(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -162,7 +162,7 @@
     </div>
 
     <script>
-        // Dados Iniciais salvos no LocalStorage (Se vazio, inicia com a nota do print)
+        // Carrega dados ou define os dados iniciais do print fornecido
         let notas = JSON.parse(localStorage.getItem('notas_fiscais')) || [
             {
                 id: "1",
@@ -180,54 +180,48 @@
             }
         ];
 
-        // Formatar valores para Moeda Brasileira
         function formatarMoeda(valor) {
             return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
         }
 
-        // Formatar datas do input (AAAA-MM-DD) para padrão BR (DD/MM/AAAA)
         function formatarDataBR(dataIso) {
             if(!dataIso) return '-';
-            const [ano, mes, dia] = dataIso.split('-');
-            return `${dia}/${mes}/${ano}`;
+            const partes = dataIso.split('-');
+            if(partes.length !== 3) return dataIso;
+            return `${partes[2]}/${partes[1]}/${partes[0]}`;
         }
 
-        // Renderiza e atualiza a interface baseada nos dados atuais
         function renderizarTabela() {
             const corpo = document.getElementById('tabela-corpo');
             corpo.innerHTML = '';
 
-            // Filtros ativos
             const fFornecedor = document.getElementById('filtro-fornecedor').value.toLowerCase();
             const fNf = document.getElementById('filtro-nf').value.toLowerCase();
             const fStatus = document.getElementById('filtro-status').value;
 
             let notasFiltradas = notas.filter(nota => {
-                return (nota.fornecedor.toLowerCase().includes(fFornecedor)) &&
-                       (nota.nf.toLowerCase().includes(fNf)) &&
-                       (fStatus === "" || nota.status === fStatus);
+                const matchFornecedor = (nota.fornecedor || '').toLowerCase().includes(fFornecedor);
+                const matchNF = (nota.nf || '').toLowerCase().includes(fNf);
+                const matchStatus = fStatus === "" || nota.status === fStatus;
+                return matchFornecedor && matchNF && matchStatus;
             });
 
-            // Atualiza Contadores do Painel Superior
+            // Atualização dos Cards
             document.getElementById('card-total-notas').innerText = notasFiltradas.length;
             
             const totalValor = notasFiltradas.reduce((acc, nota) => acc + parseFloat(nota.valor || 0), 0);
             document.getElementById('card-valor-total').innerText = formatarMoeda(totalValor);
 
-            const qtdAcatadas = notasFiltradas.filter(n => n.status === 'ACATADA').length;
-            document.getElementById('card-acatadas').innerText = qtdAcatadas;
-
-            const qtdNaoAcatadas = notasFiltradas.filter(n => n.status === 'NÃO ACATADA').length;
-            document.getElementById('card-nao-acatadas').innerText = qtdNaoAcatadas;
-
+            document.getElementById('card-acatadas').innerText = notasFiltradas.filter(n => n.status === 'ACATADA').length;
+            document.getElementById('card-nao-acatadas').innerText = notasFiltradas.filter(n => n.status === 'NÃO ACATADA').length;
             document.getElementById('contador-registros').innerText = `${notasFiltradas.length} ${notasFiltradas.length === 1 ? 'nota encontrada' : 'notas encontradas'}`;
 
-            // Criar as linhas da Tabela
+            // Geração de Linhas da Tabela
             notasFiltradas.forEach(nota => {
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-gray-50/80 transition text-gray-600 border-b border-gray-100";
                 
-                const statusClasse = nota.status === 'ACATADA' 
+                const badgeStatus = nota.status === 'ACATADA' 
                     ? 'bg-green-50 text-green-700 border border-green-200' 
                     : 'bg-red-50 text-red-700 border border-red-200';
 
@@ -242,18 +236,18 @@
                     <td class="p-4">${nota.conferente || '-'}</td>
                     <td class="p-4">${nota.prevencao || '-'}</td>
                     <td class="p-4">
-                        <span class="px-2.5 py-1 text-[11px] font-bold rounded-md tracking-wide uppercase ${statusClasse}">
+                        <span class="px-2.5 py-1 text-[11px] font-bold rounded-md tracking-wide uppercase ${badgeStatus}">
                             ${nota.status}
                         </span>
                     </td>
                     <td class="p-4 text-xs text-gray-400">${nota.observacao || '-'}</td>
                     <td class="p-4 text-center">
                         <div class="flex justify-center gap-3">
-                            <button onclick="editarNota('${nota.id}')" class="text-amber-500 hover:text-amber-600 transition" title="Editar">
-                                <i class="fa-solid fa-pencil text-base"></i>
+                            <button onclick="editarNota('${nota.id}')" class="text-amber-500 hover:text-amber-600 transition">
+                                <i class="fa-solid fa-pencil"></i>
                             </button>
-                            <button onclick="excluirNota('${nota.id}')" class="text-gray-400 hover:text-red-500 transition" title="Excluir">
-                                <i class="fa-solid fa-trash-can text-base"></i>
+                            <button onclick="excluirNota('${nota.id}')" class="text-gray-400 hover:text-red-500 transition">
+                                <i class="fa-solid fa-trash-can"></i>
                             </button>
                         </div>
                     </td>
@@ -261,11 +255,9 @@
                 corpo.appendChild(tr);
             });
 
-            // Sincroniza as alterações no armazenamento local do navegador
             localStorage.setItem('notas_fiscais', JSON.stringify(notas));
         }
 
-        // Funções do Modal
         function abrirModal() {
             document.getElementById('modal-titulo').innerText = "Nova Nota Fiscal";
             document.getElementById('form-nota').reset();
@@ -277,7 +269,6 @@
             document.getElementById('modal-nota').classList.add('hidden');
         }
 
-        // Salvar Nova Nota ou Salvar Edição
         function salvarNota(event) {
             event.preventDefault();
             const id = document.getElementById('nota-id').value;
@@ -288,21 +279,19 @@
                 fornecedor: document.getElementById('input-fornecedor').value,
                 nf: document.getElementById('input-nf').value,
                 valor: parseFloat(document.getElementById('input-valor').value),
-                chegada: document.getElementById('input-chegada').value,
-                saida: document.getElementById('input-saida').value,
+                chegada: document.getElementById('input-chegada').value || "-",
+                saida: document.getElementById('input-saida').value || "-",
                 temp: document.getElementById('input-temp').value || "-",
-                conferente: document.getElementById('input-conferente').value,
-                prevencao: document.getElementById('input-prevencao').value,
+                conferente: document.getElementById('input-conferente').value || "-",
+                prevencao: document.getElementById('input-prevencao').value || "-",
                 status: document.getElementById('input-status').value,
                 observacao: document.getElementById('input-observacao').value || "-"
             };
 
             if (id) {
-                // Modo Edição
                 const index = notas.findIndex(n => n.id === id);
                 if(index !== -1) notas[index] = dadosNota;
             } else {
-                // Modo Criação
                 notas.push(dadosNota);
             }
 
@@ -310,7 +299,6 @@
             renderizarTabela();
         }
 
-        // Mapeia os dados da linha selecionada de volta para os inputs do modal
         function editarNota(id) {
             const nota = notas.find(n => n.id === id);
             if (!nota) return;
@@ -321,18 +309,17 @@
             document.getElementById('input-fornecedor').value = nota.fornecedor;
             document.getElementById('input-nf').value = nota.nf;
             document.getElementById('input-valor').value = nota.valor;
-            document.getElementById('input-chegada').value = nota.chegada;
-            document.getElementById('input-saida').value = nota.saida;
-            document.getElementById('input-temp').value = nota.temp;
-            document.getElementById('input-conferente').value = nota.conferente;
-            document.getElementById('input-prevencao').value = nota.prevencao;
+            document.getElementById('input-chegada').value = nota.chegada === '-' ? '' : nota.chegada;
+            document.getElementById('input-saida').value = nota.saida === '-' ? '' : nota.saida;
+            document.getElementById('input-temp').value = nota.temp === '-' ? '' : nota.temp;
+            document.getElementById('input-conferente').value = nota.conferente === '-' ? '' : nota.conferente;
+            document.getElementById('input-prevencao').value = nota.prevencao === '-' ? '' : nota.prevencao;
             document.getElementById('input-status').value = nota.status;
-            document.getElementById('input-observacao').value = nota.observacao;
+            document.getElementById('input-observacao').value = nota.observacao === '-' ? '' : nota.observacao;
 
             document.getElementById('modal-nota').classList.remove('hidden');
         }
 
-        // Remover nota do array principal
         function excluirNota(id) {
             if(confirm("Tem certeza que deseja excluir esta nota fiscal?")) {
                 notas = notas.filter(n => n.id !== id);
@@ -347,9 +334,8 @@
             renderizarTabela();
         }
 
-        // Lógica para exportar os dados visíveis como arquivo .csv
         function exportarCSV() {
-            let csvContent = "data:text/csv;charset=utf-8,";
+            let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; // Inserção de BOM para aceitar acentuação no Excel
             csvContent += "Data,Fornecedor,NF,Valor,Chegada,Saida,Temp,Conferente,Prevencao,Status,Observacao\n";
 
             notas.forEach(n => {
@@ -366,7 +352,7 @@
             document.body.removeChild(link);
         }
 
-        // Executar ao abrir a tela pela primeira vez
+        // Execução inicial
         renderizarTabela();
     </script>
 </body>
